@@ -14,8 +14,8 @@ network does not require bridged networking or connectivity to the Internet.
 
 ## Recreate on a teammate's computer
 
-1. Create an Ubuntu VM in VirtualBox (Ubuntu 24.04 LTS is the reference target;
-   other Ubuntu releases require validation). A practical starting allocation is
+1. Create an Ubuntu VM in VirtualBox (Ubuntu 26.04.1 LTS is the version tested
+   in the existing project VM; other releases require validation). A practical starting allocation is
    2 CPUs, 4 GB RAM, and 25 GB disk. NAT networking provides package downloads.
    The original host-side VM configuration has 4 CPUs and 16 GB RAM; matching
    that allocation is optional for this two-host topology.
@@ -144,7 +144,11 @@ traffic and flushes/stops it afterward. Read a saved capture inside Ubuntu:
 sudo tcpdump -nn -r results/RUN/traffic.pcap -c 20
 ```
 
-Captures include ICMP and iperf3 port 5201 traffic only. The receiving h2 capture
+Captures include ICMP and iperf3 port 5201 traffic only, limited to the first
+10,000 matching packets and 128 bytes per packet (roughly 1.4 MB maximum).
+This is a header sample, not a complete recording of the transfer; tcpdump
+can also drop packets under load. Check `tcpdump.log` for capture statistics.
+The receiving h2 capture
 does not show packets dropped at h1 egress; use ping/iperf and qdisc counters to
 interpret loss. To copy root-owned results conveniently:
 
@@ -168,10 +172,15 @@ sudo chown -R "$(id -u):$(id -g)" results
 
 ## Provenance and validation status
 
+Setup and all four profiles passed in the existing VM. See the
+[runtime validation report](docs/validation-2026-10-22.md) for measured results,
+versions, the capture fix, and validation limits. A clean VM installation and
+GitHub authentication inside Ubuntu have not been tested.
+
 On 2026-10-22, the local VirtualBox configuration for `Network Project` showed
-an Ubuntu 64-bit guest, 4 CPUs, 16 GB RAM, and NAT. The guest OS release and
-installed package versions were not verified: VirtualBox guest access was
-unavailable during preparation. No guest files, original experiment results,
+an Ubuntu 64-bit guest, 4 CPUs, 16 GB RAM, and NAT. Subsequent runtime testing
+identified Ubuntu 26.04.1 LTS, Mininet 2.3.0, and Open vSwitch 3.7.1.
+No pre-existing guest scripts or original experiment results,
 or raw VM configuration were imported. This repository reconstructs the
 requested environment; it is not a verified export of the guest filesystem.
 
