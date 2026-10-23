@@ -68,6 +68,7 @@ def measure(net, profile, folder):
             (folder / 'iperf-server.log').open('w') as serverlog:
         try:
             capture = h2.popen(['tcpdump', '-i', 'h2-eth0', '-U', '-n',
+                                '-s', '128', '-c', '10000', '-B', '4096',
                                 '-w', str(folder / 'traffic.pcap'),
                                 'icmp or tcp port 5201 or udp port 5201'],
                                stdout=caplog, stderr=caplog)
