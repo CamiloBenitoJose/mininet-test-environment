@@ -31,7 +31,7 @@ network does not require bridged networking or connectivity to the Internet.
    sudo /usr/bin/python3 topology.py --test
    ```
 
-   Replace `OWNER/REPOSITORY` with the published repository. For a private repo,
+   This repository is private. Before cloning,
    accept your collaborator invitation and authenticate using GitHub's supported
    HTTPS or SSH flow. Do not put credentials into the clone URL or tracked files.
 3. Run all four independent measurement profiles:
@@ -179,29 +179,35 @@ Run the suite in the existing VM and a fresh teammate VM before treating this
 as a validated reproduction. Retain `scripts/versions.sh` output and measured
 results with your project records. Do not invent calibration results.
 
-## Publish to GitHub
+## Team access and contributions
 
-Confirm the repository name and visibility first. Suggested name:
-`mininet-test-environment`; private is a reasonable choice for team coursework.
-Create an **empty** GitHub repository without a generated README or license.
-In this folder, run the following (replace `OWNER/REPOSITORY`):
+The repository is private:
+[CamiloBenitoJose/mininet-test-environment](https://github.com/CamiloBenitoJose/mininet-test-environment).
+
+The owner can invite teammates in
+[Settings → Collaborators](https://github.com/CamiloBenitoJose/mininet-test-environment/settings/access).
+Each teammate must accept the invitation before cloning or viewing the files.
+
+Clone the published repository using the instructions above, then create a branch
+for changes:
 
 ```bash
-git init -b main
-git add .gitignore .gitattributes README.md topology.py scripts
+git switch -c my-environment-change
+# Edit the relevant files, then inspect and commit only those files.
+git status
+git add README.md topology.py scripts
 git diff --cached --stat
-git commit -m "Add reproducible Mininet test environment"
-git remote add origin https://github.com/CamiloBenitoJose/mininet-test-environment.git
-git push -u origin main
+git commit -m "Describe your environment change"
+git push -u origin my-environment-change
 ```
 
-If Git asks for your identity, configure your own name and verified GitHub
-email locally with `git config user.name "Your Name"` and
-`git config user.email "YOUR_EMAIL"`, then repeat the commit. Add teammates
-through the repository's collaborator settings. VM disks, installation media,
-PCAP files, credentials, and generated results are excluded by `.gitignore`.
-Review staged files before pushing; ignore rules do not remove files that
-were already tracked elsewhere. No license is assumed or granted by this repo.
+Open a pull request on GitHub for team review. If Git asks for your identity,
+configure your own name and verified GitHub email locally with
+`git config user.name "Your Name"` and `git config user.email "YOUR_EMAIL"`.
+
+VM disks, installation media, PCAP files, credentials, and generated results
+are excluded by `.gitignore`. Review staged files before pushing. No license
+is assumed or granted by this repository.
 
 ## References
 
