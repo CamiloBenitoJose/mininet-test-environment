@@ -208,6 +208,12 @@ def main():
                   autoSetMacs=True, autoStaticArp=True)
     try:
         net.start()
+        # Stray IPv6 packets (RS/MLD) consume netem PRNG draws and shift seeded drops.
+        for host in net.hosts:
+            host.cmd('sysctl -qw net.ipv6.conf.all.disable_ipv6=1 net.ipv6.conf.default.disable_ipv6=1')
+        for intf in net.get('s1').intfList():
+            if intf.name != 'lo':
+                subprocess.run(['sysctl', '-qw', f'net.ipv6.conf.{intf.name}.disable_ipv6=1'])
         # Warm up and validate without random loss before applying the profile.
         if net.pingAll() != 0:
             raise RuntimeError('Baseline connectivity failed')
