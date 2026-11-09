@@ -48,12 +48,29 @@ version report with any experiment you need to compare across machines.
 
 ## Calibration profiles and interpretation
 
+All impairments sit on the switch, not the hosts. The data direction is
+s1 -> h1: the s1 port facing h1 carries `netem` (half the RTT, loss, seed) at the
+root with `tbf` (rate, burst, buffer) as its child. The s1 port facing h2 carries
+only the other half of the RTT. Every profile uses netem seed 42 unless `--seed`
+is given.
+
 | Profile | Applied configuration | Expected observation |
 | --- | --- | --- |
-| `baseline` | No added shaping | Ping succeeds; record local RTT and throughput |
-| `delay` | 50 ms netem delay on each host's egress | Ping RTT near baseline + 100 ms |
-| `bandwidth` | 10 mbit TBF on each host's egress | Sustained TCP receiver rate near, usually below, 10 Mbps |
-| `loss` | 5% random netem loss on h1 egress only | Roughly 5% ping loss over 1,000 requests |
+| `baseline` | No qdiscs | Ping succeeds; record local RTT and throughput |
+| `delay` | 50 ms netem delay on each s1 port | Ping RTT near baseline + 100 ms |
+| `bandwidth` | 10 mbit tbf under netem on the s1 port facing h1 (burst 5000 B, limit 64 KiB) | iperf3 `-R` receiver rate near, usually below, 10 Mbps |
+| `loss` | 5% independent netem loss, s1 -> h1 only | Roughly 5% ping loss over 1,000 requests |
+| `geloss` | Gilbert-Elliott loss, 2% mean, mean burst 3 packets, s1 -> h1 only | About 2% ping loss in bursts averaging 3 |
+
+Override any value on top of a profile, for example a combined condition:
+
+```bash
+sudo /usr/bin/python3 topology.py --profile geloss --rtt-ms 100 --bw-mbit 10 --test
+```
+
+`--buffer-bdp` sets the tbf buffer as a multiple of the bandwidth-delay
+product (default 1). Each `--test` run writes `config.json` with the exact tc
+commands and derived burst and buffer sizes.
 
 Run an individual profile:
 
@@ -64,7 +81,7 @@ sudo /usr/bin/python3 topology.py --profile loss --test
 ```
 
 Each run stores `ping.txt`, `iperf.json`, `traffic.pcap`, tcpdump/server logs,
-and both host qdisc statistics in `results/<UTC timestamp>-<profile>/`.
+and qdisc statistics for both s1 ports in `results/<UTC timestamp>-<profile>/`.
 The bandwidth measurement uses a 20-second TCP iperf3 transfer; inspect
 `end.sum_received.bits_per_second / 1000000` in the JSON for receiver Mbps.
 For example, inside Ubuntu:
@@ -82,14 +99,15 @@ profile's TCP rate can be substantially lower than baseline.
 Delay is applied only once in each direction: 50 ms request + 50 ms reply.
 Adding 50 ms to every port on both links would instead add about 200 ms RTT.
 For an unloaded VM, baseline + 100 ms within several milliseconds is a useful
-initial target; scheduling load can increase it. Adjust each host's delay by
+initial target; scheduling load can increase it. Adjust the delay on each s1 port by
 half the desired RTT correction if necessary, and record the actual settings.
 
 Loss is deliberately one-directional. Applying 5% independently in both
 directions produces about 9.75% ping failure, not 5%. With 1,000 requests,
 approximately 3.6–6.4% observed loss is a rough 95% sampling interval under
-independent drops; values outside it can still occur. This profile is **not**
-the Gilbert–Elliott burst-loss model, which remains a future extension.
+independent drops; values outside it can still occur. Use `geloss` for the
+Gilbert–Elliott burst-loss model. A fixed seed fixes the drop pattern too, so
+report the measured loss, not only the configured value.
 
 TBF limits the emulated path, not the VM's NAT adapter. TCP/application payload
 rate differs from the configured link rate because of protocol overhead,
@@ -148,8 +166,8 @@ Captures include ICMP and iperf3 port 5201 traffic only, limited to the first
 10,000 matching packets and 128 bytes per packet (roughly 1.4 MB maximum).
 This is a header sample, not a complete recording of the transfer; tcpdump
 can also drop packets under load. Check `tcpdump.log` for capture statistics.
-The receiving h2 capture
-does not show packets dropped at h1 egress; use ping/iperf and qdisc counters to
+The h2 capture does not show
+packets dropped on the s1 -> h1 port; use ping/iperf and qdisc counters to
 interpret loss. To copy root-owned results conveniently:
 
 ```bash
